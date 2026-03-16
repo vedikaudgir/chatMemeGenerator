@@ -1,4 +1,4 @@
-from server.repositories.chat_repository import create_chat, get_chat
+from server.repositories.chat_repository import create_chat, get_chat, update_chat
 from server.repositories.participant_repository import (
     add_participant,
     get_participants
@@ -62,6 +62,11 @@ def get_chat_state(chat_id):
         "participants": participants,
         "messages": messages
     }
+
+def update_chat_workflow(chat_id, platform, title, subtitle, theme):
+    update_chat(chat_id, platform, title, subtitle, theme)
+    return {"status": "chat updated"}
+
 
 def generate_preview(chat_id):
     chat = get_chat(chat_id)

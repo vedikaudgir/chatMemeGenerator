@@ -41,5 +41,16 @@ def init_db():
         )
     """)
 
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE,
+        email TEXT UNIQUE,
+        password_hash TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )
+""")
     conn.commit()
     conn.close()
+
+
