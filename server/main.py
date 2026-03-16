@@ -13,7 +13,17 @@ from server.services.chat_service import (
 
 from server.repositories.__init__db import init_db
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI(title="Chat Meme Generator")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.on_event("startup")
 def startup():
@@ -40,6 +50,18 @@ def add_message(chat_id: int, msg: AddMessageRequest):
         msg.reply_to,
         msg.meta
     )
+
+@app.patch("/chats/{chat_id}")
+def update_chat(chat_id: int, data: CreateChatRequest):
+    from server.services.chat_service import update_chat_workflow
+    return update_chat_workflow(
+        chat_id,
+        data.platform,
+        data.title,
+        data.subtitle,
+        data.theme
+    )
+
 
 @app.get("/chats/{chat_id}")
 def get_chat(chat_id: int):

@@ -31,3 +31,17 @@ def get_chat(chat_id):
 
     conn.close()
     return row
+
+
+def update_chat(chat_id, platform, title, subtitle, theme):
+    conn = get_conn()
+    cur = conn.cursor()
+
+    cur.execute("""
+        UPDATE chats
+        SET platform=?, title=?, subtitle=?, theme=?
+        WHERE id=?
+    """, (platform, title, subtitle, theme, chat_id))
+
+    conn.commit()
+    conn.close()

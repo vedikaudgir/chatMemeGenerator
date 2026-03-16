@@ -21,7 +21,6 @@ def make_circle(image, size):
 
 
 def render_whatsapp(chat, participants, messages):
-    # FIXED: avoid tuple unpacking issues
     chat_id = chat[0]
     title = chat[2]
     subtitle = chat[3]
@@ -53,7 +52,6 @@ def render_whatsapp(chat, participants, messages):
     back = load_icon(f"{BASE}/icons/back.png", (110, 110))
     img.paste(back, (5, 50), back)
 
-    # display picture
     dp_path = None
     for p in participants:
         if p[2] != "me" and p[4]:
@@ -84,7 +82,7 @@ def render_whatsapp(chat, participants, messages):
     bubble_out = (220, 248, 198)
 
     for m in messages:
-        _, sender_id, mtype, content, time, direction, _, meta = m
+        _, chat_id, sender_id, mtype, content, time, direction, _, meta = m
 
         if mtype != "text":
             continue
@@ -95,10 +93,26 @@ def render_whatsapp(chat, participants, messages):
         text_w = bbox[2] - bbox[0]
         text_h = bbox[3] - bbox[1]
 
-        bubble_w = min(text_w + 170, max_w)
-        bubble_h = max(text_h + 50, 50)
+        # Measure actual timestamp width
+        time_bbox = draw.textbbox((0, 0), time, font=time_font)
+        time_w = time_bbox[2] - time_bbox[0]
+        time_h = time_bbox[3] - time_bbox[1]
 
-        if direction == "out":
+        line_count = wrapped.count("\n") + 1
+        h_pad = 24  # top & bottom padding inside bubble
+        text_left = 30
+        time_gap = 20  # gap between text and timestamp when inline
+
+        if line_count == 1:
+            # Short message: timestamp sits inline, right of text
+            bubble_w = min(text_left + text_w + time_gap + time_w + 30, max_w)
+            bubble_h = text_h + h_pad * 2
+        else:
+            # Multi-line: timestamp goes below the text
+            bubble_w = min(max(text_w + 60, time_w + 60), max_w)
+            bubble_h = text_h + time_h + h_pad * 2 + 10
+
+        if direction == "outbound":
             x = width - bubble_w - padding
             color = bubble_out
         else:
@@ -110,17 +124,34 @@ def render_whatsapp(chat, participants, messages):
             radius=25,
             fill=color
         )
+        if line_count == 1:
+            # Center text vertically in the bubble
+            text_y = y + (bubble_h - text_h) // 2
+        else:
+            # Center text in the area above the timestamp
+            text_area_h = bubble_h - time_h - 10
+            text_y = y + (text_area_h - text_h) // 2
 
-        draw.text((x + 35, y + 20), wrapped, font=msg_font, fill="black")
+        draw.text((x + text_left, text_y), wrapped, font=msg_font, fill="black")
 
-        draw.text(
-            (x + bubble_w - 80, y + bubble_h - 35),
-            time,
-            font=time_font,
-            fill=(80, 80, 80)
-        )
+        if line_count == 1:
+            # Inline: timestamp vertically centered, to the right of text
+            draw.text(
+                (x + bubble_w - time_w - 18, y + bubble_h - time_h - 10),
+                time,
+                font=time_font,
+                fill=(80, 80, 80)
+            )
+        else:
+            # Below: timestamp bottom-right
+            draw.text(
+                (x + bubble_w - time_w - 18, y + bubble_h - time_h - 12),
+                time,
+                font=time_font,
+                fill=(80, 80, 80)
+            )
 
-        y += bubble_h + 25
+        y += bubble_h + 15
 
     bar_top = height - 150
     bar_bottom = height - 20
