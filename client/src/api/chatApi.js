@@ -8,7 +8,7 @@ export const chatApi = {
                 "Content-Type": "application/json",
             },
             body: JSON.stringify({
-                platform: chatConfig.platform,
+                platform: chatConfig.platform.toLowerCase(),
                 title: chatConfig.title,
                 subtitle: chatConfig.subtitle,
                 theme: chatConfig.theme || "light",
