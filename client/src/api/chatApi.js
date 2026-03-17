@@ -1,4 +1,4 @@
-const API_BASE_URL = "http://localhost:8000";
+const API_BASE_URL = "https://chatmemegenerator-production.up.railway.app";
 
 export const chatApi = {
     createChat: async (chatConfig) => {
