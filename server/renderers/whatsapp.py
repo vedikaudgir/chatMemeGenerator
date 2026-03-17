@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from PIL import Image, ImageDraw, ImageFont
 import textwrap
 import os
@@ -29,28 +31,65 @@ def render_whatsapp(chat, participants, messages):
     height = 2000
     padding = 20
 
-    BASE = "server/utils/assets/whatsapp"
-    FONT = "server/static/fonts/Roboto-Regular.ttf"
-    OUTPUT_DIR = "server/output"
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    server_dir = Path(__file__).resolve().parents[1]
+    BASE = server_dir / "utils" / "assets" / "whatsapp"
+    FONT = server_dir / "static" / "fonts" / "Roboto-Regular.ttf"
+    OUTPUT_DIR = server_dir / "output"
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    wallpaper = Image.open(f"{BASE}/wallpaper.png").resize((width, height))
+    wallpaper_path = BASE / "wallpaper.png"
+    if not wallpaper_path.exists():
+        img = Image.new("RGB", (width, height), (245, 245, 245))
+        draw = ImageDraw.Draw(img)
+        font = ImageFont.load_default()
+
+        header_h = 160
+        draw.rectangle((0, 0, width, header_h), fill=(7, 94, 84))
+        draw.text((24, 30), title or "Chat", fill="white", font=font)
+        if subtitle:
+            draw.text((24, 70), subtitle, fill=(220, 240, 220), font=font)
+
+        y = header_h + 30
+        for m in messages[:25]:
+            try:
+                content = m[4]
+            except Exception:
+                continue
+            if not content:
+                continue
+            wrapped = textwrap.fill(str(content), width=60)
+            draw.text((24, y), wrapped, fill=(20, 20, 20), font=font)
+            y += 20 * (wrapped.count("\n") + 2)
+
+        out_path = (OUTPUT_DIR / f"chat_{chat_id}.png").resolve()
+        img.save(out_path)
+        return str(out_path)
+
+    wallpaper = Image.open(wallpaper_path).resize((width, height))
     img = Image.new("RGB", (width, height))
     img.paste(wallpaper, (0, 0))
 
     draw = ImageDraw.Draw(img)
 
-    name_font = ImageFont.truetype(FONT, 48)
-    status_font = ImageFont.truetype(FONT, 32)
-    msg_font = ImageFont.truetype(FONT, 42)
-    time_font = ImageFont.truetype(FONT, 24)
+    if FONT.exists():
+        name_font = ImageFont.truetype(str(FONT), 48)
+        status_font = ImageFont.truetype(str(FONT), 32)
+        msg_font = ImageFont.truetype(str(FONT), 42)
+        time_font = ImageFont.truetype(str(FONT), 24)
+    else:
+        name_font = ImageFont.load_default()
+        status_font = ImageFont.load_default()
+        msg_font = ImageFont.load_default()
+        time_font = ImageFont.load_default()
 
     wa_green = (7, 94, 84)
     header_h = 200
     draw.rectangle((0, 0, width, header_h), fill=wa_green)
 
-    back = load_icon(f"{BASE}/icons/back.png", (110, 110))
-    img.paste(back, (5, 50), back)
+    back_path = BASE / "icons" / "back.png"
+    if back_path.exists():
+        back = load_icon(back_path, (110, 110))
+        img.paste(back, (5, 50), back)
 
     dp_path = None
     for p in participants:
@@ -58,8 +97,13 @@ def render_whatsapp(chat, participants, messages):
             dp_path = p[4]
             break
 
-    if dp_path and os.path.exists(dp_path):
-        dp = Image.open(dp_path).convert("RGB").resize((130, 130))
+    dp_candidate = None
+    if dp_path:
+        p = Path(dp_path)
+        dp_candidate = p if p.is_absolute() else (server_dir.parent / p).resolve()
+
+    if dp_candidate and dp_candidate.exists():
+        dp = Image.open(dp_candidate).convert("RGB").resize((130, 130))
         mask = Image.new("L", (130, 130), 0)
         ImageDraw.Draw(mask).ellipse((0, 0, 130, 130), fill=255)
         img.paste(dp, (100, 35), mask)
@@ -67,13 +111,17 @@ def render_whatsapp(chat, participants, messages):
     draw.text((260, 55), title, fill="white", font=name_font)
     draw.text((260, 125), subtitle, fill=(220, 240, 220), font=status_font)
 
-    video = load_icon(f"{BASE}/icons/video.png", (120, 120))
-    call = load_icon(f"{BASE}/icons/call.png", (110, 110))
-    menu = load_icon(f"{BASE}/icons/menu.png", (115, 115))
+    video_path = BASE / "icons" / "video.png"
+    call_path = BASE / "icons" / "call.png"
+    menu_path = BASE / "icons" / "menu.png"
+    if video_path.exists() and call_path.exists() and menu_path.exists():
+        video = load_icon(video_path, (120, 120))
+        call = load_icon(call_path, (110, 110))
+        menu = load_icon(menu_path, (115, 115))
 
-    img.paste(video, (width - 330, 45), video)
-    img.paste(call, (width - 210, 45), call)
-    img.paste(menu, (width - 110, 45), menu)
+        img.paste(video, (width - 330, 45), video)
+        img.paste(call, (width - 210, 45), call)
+        img.paste(menu, (width - 110, 45), menu)
 
     y = header_h + 20
     max_w = int(width * 0.80)
@@ -162,18 +210,23 @@ def render_whatsapp(chat, participants, messages):
         fill="white"
     )
 
-    emoji = load_icon(f"{BASE}/icons/emoji.png", (70, 70))
-    attach = load_icon(f"{BASE}/icons/attach.png", (80, 80))
-    camera = load_icon(f"{BASE}/icons/camera.png", (90, 90))
-    mic = load_icon(f"{BASE}/icons/mic.png", (100, 100))
+    emoji_path = BASE / "icons" / "emoji.png"
+    attach_path = BASE / "icons" / "attach.png"
+    camera_path = BASE / "icons" / "camera.png"
+    mic_path = BASE / "icons" / "mic.png"
+    if emoji_path.exists() and attach_path.exists() and camera_path.exists() and mic_path.exists():
+        emoji = load_icon(emoji_path, (70, 70))
+        attach = load_icon(attach_path, (80, 80))
+        camera = load_icon(camera_path, (90, 90))
+        mic = load_icon(mic_path, (100, 100))
 
-    img.paste(emoji, (40, bar_top + 30), emoji)
-    img.paste(attach, (110, bar_top + 30), attach)
-    img.paste(camera, (width - 280, bar_top + 20), camera)
+        img.paste(emoji, (40, bar_top + 30), emoji)
+        img.paste(attach, (110, bar_top + 30), attach)
+        img.paste(camera, (width - 280, bar_top + 20), camera)
 
-    mic_circle = make_circle(mic, (90, 90))
-    img.paste(mic_circle, (width - 140, bar_top + 15), mic_circle)
+        mic_circle = make_circle(mic, (90, 90))
+        img.paste(mic_circle, (width - 140, bar_top + 15), mic_circle)
 
-    out_path = f"{OUTPUT_DIR}/chat_{chat_id}.png"
+    out_path = (OUTPUT_DIR / f"chat_{chat_id}.png").resolve()
     img.save(out_path)
-    return out_path
+    return str(out_path)
