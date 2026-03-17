@@ -37,20 +37,27 @@ UPLOADS_DIR = SERVER_DIR / "static" / "uploads"
 
 def _parse_cors_origins() -> tuple[list[str], bool]:
     raw = os.getenv("CORS_ALLOW_ORIGINS", "").strip()
+    raw_credentials = os.getenv("CORS_ALLOW_CREDENTIALS", "").strip().lower()
+    credentials_override = None
+    if raw_credentials in {"true", "1", "yes", "y"}:
+        credentials_override = True
+    elif raw_credentials in {"false", "0", "no", "n"}:
+        credentials_override = False
+
     if not raw:
-        origins = [
-            "http://localhost:5173",
-            "http://127.0.0.1:5173",
-            "http://localhost:3000",
-            "http://127.0.0.1:3000",
-        ]
-        return origins, True
+        # Safe default for deployments: allow any origin but disable credentials.
+        # If you need credentialed requests, set CORS_ALLOW_ORIGINS explicitly.
+        allow_credentials = False if credentials_override is None else credentials_override
+        return ["*"], allow_credentials
 
     origins = [o.strip() for o in raw.split(",") if o.strip()]
     if any(o == "*" for o in origins):
-        return ["*"], False
+        allow_credentials = False if credentials_override is None else credentials_override
+        # Credentials must be false when allow_origins is "*"
+        return ["*"], False if allow_credentials else False
 
-    return origins, True
+    allow_credentials = True if credentials_override is None else credentials_override
+    return origins, allow_credentials
 
 
 cors_origins, cors_allow_credentials = _parse_cors_origins()
