@@ -55,6 +55,14 @@ app.add_middleware(
 )
 
 
+@app.options("/{path:path}")
+def options_passthrough(path: str):
+    # Some proxies/clients send OPTIONS without typical CORS preflight headers.
+    # Returning 204 avoids noisy 400s while CORS middleware still sets headers
+    # when it detects a real preflight request.
+    return {}
+
+
 @app.on_event("startup")
 def startup():
     init_db()
