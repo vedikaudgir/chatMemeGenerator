@@ -22,6 +22,14 @@ from server.repositories.participant_repository import update_avatar
 
 app = FastAPI(title="Chat Meme Generator")
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["https://chat-meme-generator.vercel.app"],  # 👈 IMPORTANT
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SERVER_DIR = REPO_ROOT / "server"
 UPLOADS_DIR = SERVER_DIR / "static" / "uploads"
